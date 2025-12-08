@@ -30,11 +30,11 @@ interface ExchangeRates {
 type Currency = 'HUF' | 'EUR' | 'USD' | 'GBP' | 'CHF';
 
 const FLAG_URLS = {
-  HUF: 'https://raw.githubusercontent.com/lipis/flag-icons/main/flags/4x3/hu.svg',
-  EUR: 'https://raw.githubusercontent.com/lipis/flag-icons/main/flags/4x3/eu.svg',
-  USD: 'https://raw.githubusercontent.com/lipis/flag-icons/main/flags/4x3/us.svg',
-  GBP: 'https://raw.githubusercontent.com/lipis/flag-icons/main/flags/4x3/gb.svg',
-  CHF: 'https://raw.githubusercontent.com/lipis/flag-icons/main/flags/4x3/ch.svg',
+  HUF: '/flags/hu.svg',
+  EUR: '/flags/eu.svg',
+  USD: '/flags/us.svg',
+  GBP: '/flags/gb.svg',
+  CHF: '/flags/ch.svg',
 } as const;
 
 interface SortableCurrencyCardProps {
@@ -61,7 +61,9 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 2 : 1,
+    zIndex: isDragging ? 50 : 1,
+    scale: isDragging ? '1.1' : '1',
+    rotate: isDragging ? '2deg' : '0deg',
   };
 
   const formatNumber = (value: number): string => {
@@ -118,7 +120,7 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
       className={`${props.isDarkMode ? props.darkBgColor : props.bgColor} p-6 rounded-2xl transition-all duration-200
         border ${props.isDarkMode ? 'border-zinc-700/50 hover:border-zinc-600' : 'border-stone-200 hover:border-stone-300'}
         hover:shadow-2xl animate-slide-up relative group cursor-grab active:cursor-grabbing
-        ${isDragging ? 'shadow-2xl scale-110 ring-2 ring-cyan-500 rotate-1 z-50' : 'hover:scale-[1.02]'}`}
+        ${isDragging ? 'shadow-2xl ring-2 ring-cyan-500' : 'hover:scale-[1.02]'}`}
       {...attributes}
       {...listeners}
     >
