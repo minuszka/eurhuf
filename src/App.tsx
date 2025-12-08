@@ -451,7 +451,7 @@ function App() {
           </div>
 
           <p className={`text-sm text-center px-4 ${isDarkMode ? 'text-zinc-500' : 'text-stone-500'}`}>
-            A megjelenített valutaárfolyam a középárfolyamot mutatja, amely bankoknál és pénzváltóknál kisebb mértékben eltérhet. Valuta eladásánál alacsonyabb, míg vásárlásnál magasabb árfolyamot alkalmaznak.
+            A megjelenített árfolyam középárfolyam, amely a bankoknál és pénzváltóknál kis mértékben eltérhet. Eladásnál általában alacsonyabb, vásárlásnál magasabb árfolyamot használnak.
           </p>
           <div className={`text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
             ⓒ 2025 Minusz
