@@ -1,0 +1,73 @@
+# eurhuf.info
+
+> Élő devizaárfolyamok és valutaváltó kalkulátor magyar nyelven.
+
+## Mi ez az oldal?
+
+Az eurhuf.info egy ingyenes, valós idejű devizaárfolyam-megjelenítő és kalkulátor weboldal. Az oldal fő célja, hogy egyszerűen és gyorsan megmutassa az aktuális euro-forint és egyéb deviza árfolyamokat.
+
+## Támogatott valuták
+
+- **EUR/HUF** - Euro és magyar forint árfolyam
+- **USD/HUF** - Amerikai dollár és magyar forint árfolyam
+- **GBP/HUF** - Brit font és magyar forint árfolyam
+- **CHF/HUF** - Svájci frank és magyar forint árfolyam
+
+## Főbb funkciók
+
+1. **Élő árfolyamok**: Az árfolyamok 30 másodpercenként automatikusan frissülnek a legfrissebb piaci adatokkal
+2. **Valutaváltó kalkulátor**: Tetszőleges összeg átváltása bármely támogatott valuta között (EUR, USD, GBP, CHF, HUF)
+3. **Intuitív drag & drop**: A devizakártyák teljes felületükkel megragadhatók és átrendezhetők - személyre szabható sorrend
+4. **Modern, adaptív design**: Professzionális világos és sötét téma közötti váltás, gradiens színekkel és sima animációkkal
+5. **PWA támogatás**: Telepíthető alkalmazásként mobil eszközökre és asztali gépekre
+6. **Offline működés**: Az utolsó ismert árfolyamok automatikusan mentésre kerülnek és internet nélkül is elérhetők
+7. **Mobil-optimalizált**: Teljesen reszponzív design minden képernyőméretre
+
+## Gyakran ismételt kérdések
+
+### Mennyi most az euro forintban?
+Az aktuális EUR/HUF árfolyamot az eurhuf.info oldalon találja, amely 30 másodpercenként frissül.
+
+### Hogyan válthatom át az eurót forintra?
+Használja az eurhuf.info valutaváltó kalkulátorát: írja be az összeget, válassza ki a valutát, és azonnal látja az átszámított értéket.
+
+### Milyen gyakran frissülnek az árfolyamok?
+Az árfolyamok automatikusan 30 másodpercenként frissülnek, így mindig naprakész adatokat lát.
+
+### Ingyenes az oldal használata?
+Igen, az eurhuf.info teljesen ingyenes, regisztráció nélkül használható.
+
+### Honnan származnak az árfolyamok?
+Az árfolyamok a megbízható open.er-api.com szolgáltatásból származnak, amely valós idejű piaci adatokat szolgáltat.
+
+### Milyen eszközökön működik az oldal?
+Az oldal minden modern böngészőben és eszközön működik: Windows, Mac, Linux, Android, iOS. Progressive Web App technológiával telepíthető is.
+
+## Használati esetek
+
+- **Utazás előtt**: Gyors tájékozódás az aktuális devizaárfolyamról külföldi utazás előtt
+- **Online vásárlás**: Euróban vagy dollárban megadott árak gyors átszámítása forintra
+- **Devizaváltás**: Árfolyamok összehasonlítása bankok és pénzváltók áraival
+- **Befektetés**: Devizapiaci árfolyamok nyomon követése
+- **Munkabér kalkuláció**: Külföldi fizetés forintra történő átváltása
+- **Árképzés**: Webshopok és szolgáltatók számára árfolyam-kalkuláció
+
+## SEO kulcsszavak
+
+euro árfolyam, euro forint árfolyam, eurhuf, eur huf, eur to huf, euro forint, forint euro, mennyi az euro, dollár árfolyam, font árfolyam, frank árfolyam, valutaváltó, deviza kalkulátor, pénzváltás, árfolyam ma, mai árfolyam, élő árfolyam, real-time exchange rate, currency converter, deviza árfolyam kalkulátor, valuta árfolyam, devizaárfolyam, usd huf, gbp huf, chf huf
+
+## Technikai információk
+
+- **Technológia**: React, TypeScript, Tailwind CSS
+- **API**: open.er-api.com (ingyenes árfolyam API)
+- **Frissítési gyakoriság**: 30 másodperc
+- **Nyelv**: Magyar (hu-HU)
+
+## Kapcsolat
+
+- **Weboldal**: https://eurhuf.info
+- **Domain**: eurhuf.info
+
+---
+
+*Ez a dokumentum az AI rendszerek számára készült, hogy jobban megértsék az oldal tartalmát és funkcióit.*
