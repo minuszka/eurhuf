@@ -118,7 +118,7 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
       className={`${props.isDarkMode ? props.darkBgColor : props.bgColor} p-6 rounded-2xl transition-all duration-200
         border ${props.isDarkMode ? 'border-zinc-700/50 hover:border-zinc-600' : 'border-stone-200 hover:border-stone-300'}
         hover:shadow-2xl animate-slide-up relative group cursor-grab active:cursor-grabbing
-        ${isDragging ? 'shadow-2xl scale-105 opacity-90 ring-2 ring-cyan-500/50' : 'hover:scale-[1.02]'}`}
+        ${isDragging ? 'shadow-2xl scale-110 ring-2 ring-cyan-500 rotate-1 z-50' : 'hover:scale-[1.02]'}`}
       {...attributes}
       {...listeners}
     >
