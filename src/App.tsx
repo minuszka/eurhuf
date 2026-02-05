@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Euro, DollarSign, PoundSterling, Sun, Moon, AlertCircle } from 'lucide-react';
 import {
   DndContext,
@@ -18,6 +18,14 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+    [key: string]: unknown;
+  }
+}
+
 interface ExchangeRates {
   rates: {
     EUR: number;
@@ -28,6 +36,9 @@ interface ExchangeRates {
 }
 
 type Currency = 'HUF' | 'EUR' | 'USD' | 'GBP' | 'CHF';
+
+const ANALYTICS_ID = 'G-HFNYDL6KN3';
+const ANALYTICS_STORAGE_KEY = 'analyticsConsent';
 
 const FLAG_URLS = {
   HUF: '/flags/hu.svg',
@@ -48,6 +59,26 @@ interface SortableCurrencyCardProps {
   selectedCurrency: Currency;
 }
 
+const loadAnalytics = () => {
+  const existing = document.querySelector(
+    `script[src^="https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}"]`
+  );
+
+  if (!existing) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}`;
+    document.head.appendChild(script);
+  }
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || ((...args: unknown[]) => {
+    window.dataLayer?.push(args);
+  });
+  window.gtag('js', new Date());
+  window.gtag('config', ANALYTICS_ID, { anonymize_ip: true });
+};
+
 function SortableCurrencyCard(props: SortableCurrencyCardProps) {
   const {
     attributes,
@@ -58,12 +89,14 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
     isDragging,
   } = useSortable({ id: props.currency });
 
+  const baseTransform = CSS.Transform.toString(transform);
+  const dragTransform = isDragging ? ' scale(1.05) rotate(2deg)' : '';
+  const combinedTransform = `${baseTransform}${dragTransform}`.trim();
+
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: combinedTransform || undefined,
     transition,
     zIndex: isDragging ? 50 : 1,
-    scale: isDragging ? '1.1' : '1',
-    rotate: isDragging ? '2deg' : '0deg',
   };
 
   const formatNumber = (value: number): string => {
@@ -78,7 +111,7 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
       case 'EUR': return '€';
       case 'USD': return '$';
       case 'GBP': return '£';
-      case 'CHF': return '₣';
+      case 'CHF': return 'CHF';
       default: return 'Ft';
     }
   };
@@ -88,7 +121,7 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
       case '€': return FLAG_URLS.EUR;
       case '$': return FLAG_URLS.USD;
       case '£': return FLAG_URLS.GBP;
-      case '₣': return FLAG_URLS.CHF;
+      case 'CHF': return FLAG_URLS.CHF;
       case 'Ft': return FLAG_URLS.HUF;
       default: return FLAG_URLS.HUF;
     }
@@ -117,6 +150,7 @@ function SortableCurrencyCard(props: SortableCurrencyCardProps) {
     <div
       ref={setNodeRef}
       style={style}
+      role="listitem"
       className={`${props.isDarkMode ? props.darkBgColor : props.bgColor} p-6 rounded-2xl transition-all duration-200
         border ${props.isDarkMode ? 'border-zinc-700/50 hover:border-zinc-600' : 'border-stone-200 hover:border-stone-300'}
         hover:shadow-2xl animate-slide-up relative group cursor-grab active:cursor-grabbing
@@ -174,6 +208,21 @@ function App() {
     const savedOrder = localStorage.getItem('currencyOrder');
     return savedOrder ? JSON.parse(savedOrder) : ['EUR', 'USD', 'GBP', 'CHF'];
   });
+  const [analyticsConsent, setAnalyticsConsent] = useState<'granted' | 'denied' | null>(() => {
+    const savedConsent = localStorage.getItem(ANALYTICS_STORAGE_KEY);
+    return savedConsent === 'granted' || savedConsent === 'denied' ? savedConsent : null;
+  });
+
+  const updateAnalyticsConsent = (value: 'granted' | 'denied') => {
+    setAnalyticsConsent(value);
+    localStorage.setItem(ANALYTICS_STORAGE_KEY, value);
+  };
+
+  const resetAnalyticsConsent = () => {
+    localStorage.removeItem(ANALYTICS_STORAGE_KEY);
+    window[`ga-disable-${ANALYTICS_ID}`] = true;
+    setAnalyticsConsent(null);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -211,6 +260,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (analyticsConsent === 'granted') {
+      window[`ga-disable-${ANALYTICS_ID}`] = false;
+      loadAnalytics();
+    } else if (analyticsConsent === 'denied') {
+      window[`ga-disable-${ANALYTICS_ID}`] = true;
+    }
+  }, [analyticsConsent]);
+
+  useEffect(() => {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
@@ -220,8 +278,26 @@ function App() {
 
   useEffect(() => {
     fetchRates();
-    const interval = setInterval(fetchRates, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchRates();
+      }
+    }, 30000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchRates();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [fetchRates]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,7 +386,10 @@ function App() {
                 <span className="font-medium tracking-tighter">HUF</span>
               </h2>
               <button
+                type="button"
                 onClick={() => setIsDarkMode(!isDarkMode)}
+                aria-label="Téma váltása"
+                aria-pressed={isDarkMode}
                 className={`p-2.5 rounded-xl transition-all duration-500 transform hover:scale-110 ${
                   isDarkMode
                     ? 'bg-zinc-800 text-cyan-400 hover:bg-zinc-700 hover:text-cyan-300 border border-zinc-700'
@@ -325,8 +404,11 @@ function App() {
             </div>
             <div className="mt-5 mb-6 flex gap-3 w-full">
               <div className="relative flex-1 min-w-0 flex">
+                <label htmlFor="amount-input" className="sr-only">Összeg</label>
                 <button
+                  type="button"
                   onClick={() => handleAmountAdjust(false)}
+                  aria-label="Összeg csökkentése"
                   className={`absolute left-0 top-0 bottom-0 px-3 rounded-l-xl transition-all z-10 ${
                     isDarkMode
                       ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-cyan-400 border border-zinc-700'
@@ -336,7 +418,9 @@ function App() {
                   -
                 </button>
                 <input
+                  id="amount-input"
                   type="text"
+                  inputMode="decimal"
                   value={amount}
                   onChange={handleAmountChange}
                   className={`w-full py-3 px-11 text-lg text-center rounded-xl transition-all duration-300 border
@@ -348,7 +432,9 @@ function App() {
                   placeholder="Összeg"
                 />
                 <button
+                  type="button"
                   onClick={() => handleAmountAdjust(true)}
+                  aria-label="Összeg növelése"
                   className={`absolute right-0 top-0 bottom-0 px-3 rounded-r-xl transition-all z-10 ${
                     isDarkMode
                       ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-cyan-400 border border-zinc-700'
@@ -358,31 +444,40 @@ function App() {
                   +
                 </button>
               </div>
-              <select
-                value={selectedCurrency}
-                onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
-                className={`w-32 py-3 px-4 text-lg text-center font-medium rounded-xl transition-all duration-300 border
-                  focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
-                  isDarkMode
-                    ? 'bg-zinc-800/70 border-zinc-700 text-zinc-100'
-                    : 'bg-stone-50 border-stone-300 text-stone-800'
-                }`}
-              >
-                <option value="EUR">EUR</option>
-                <option value="HUF">HUF</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-                <option value="CHF">CHF</option>
-              </select>
+              <div className="w-32">
+                <label htmlFor="currency-select" className="sr-only">Deviza</label>
+                <select
+                  id="currency-select"
+                  value={selectedCurrency}
+                  onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
+                  aria-label="Deviza kiválasztása"
+                  className={`w-full py-3 px-4 text-lg text-center font-medium rounded-xl transition-all duration-300 border
+                    focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
+                    isDarkMode
+                      ? 'bg-zinc-800/70 border-zinc-700 text-zinc-100'
+                      : 'bg-stone-50 border-stone-300 text-stone-800'
+                  }`}
+                >
+                  <option value="EUR">EUR</option>
+                  <option value="HUF">HUF</option>
+                  <option value="USD">USD</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CHF">CHF</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4" aria-busy={isLoading}>
           {error && (
-            <div className={`p-4 rounded-xl flex items-center gap-3 border ${
-              isDarkMode ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'
-            }`}>
+            <div
+              role="alert"
+              aria-live="polite"
+              className={`p-4 rounded-xl flex items-center gap-3 border ${
+                isDarkMode ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'
+              }`}
+            >
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
@@ -412,25 +507,30 @@ function App() {
               ))}
             </div>
           ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={currencyOrder}
-                strategy={verticalListSortingStrategy}
+            <>
+              <p id="currency-order-help" className="sr-only">
+                A kártyák sorrendje húzással állítható.
+              </p>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="grid grid-cols-1 gap-4">
-                  {currencyOrder.map((currency) => (
-                    <SortableCurrencyCard
-                      key={currency}
-                      {...getCurrencyCardProps(currency)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+                <SortableContext
+                  items={currencyOrder}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="grid grid-cols-1 gap-4" role="list" aria-describedby="currency-order-help">
+                    {currencyOrder.map((currency) => (
+                      <SortableCurrencyCard
+                        key={currency}
+                        {...getCurrencyCardProps(currency)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </>
           )}
         </div>
 
@@ -441,7 +541,7 @@ function App() {
             <a
               href="https://revolut.com/referral/?referral-code=roland309s!MAR1-25-AR-H1"
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener noreferrer sponsored nofollow"
               className="block text-center"
             >
               <p className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-stone-600'}`}>
@@ -454,10 +554,61 @@ function App() {
             A megjelenített árfolyam középárfolyam, amely a bankoknál és pénzváltóknál kis mértékben eltérhet. Eladásnál általában alacsonyabb, vásárlásnál magasabb árfolyamot használnak.
           </p>
           <div className={`text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
-            ⓒ 2025 Minusz
+            <span>© 2026 Minusz</span>
+            <button
+              type="button"
+              onClick={resetAnalyticsConsent}
+              className={`ml-2 underline underline-offset-2 ${isDarkMode ? 'text-zinc-400 hover:text-zinc-300' : 'text-stone-500 hover:text-stone-700'}`}
+            >
+              Süti beállítások
+            </button>
           </div>
         </div>
       </div>
+
+      {analyticsConsent === null && (
+        <div
+          role="dialog"
+          aria-live="polite"
+          className={`fixed bottom-4 left-4 right-4 z-50 rounded-2xl p-4 border shadow-2xl backdrop-blur-xl ${
+            isDarkMode
+              ? 'bg-zinc-900/95 border-zinc-700 text-zinc-200'
+              : 'bg-white/95 border-stone-200 text-stone-700'
+          }`}
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-sm leading-relaxed">
+              Ez az oldal Google Analytics sütiket használ a látogatottság méréséhez. Engedélyezed?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                aria-label="Sütik elutasítása"
+                onClick={() => updateAnalyticsConsent('denied')}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  isDarkMode
+                    ? 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700'
+                    : 'bg-stone-100 text-stone-700 border border-stone-300 hover:bg-stone-200'
+                }`}
+              >
+                Elutasítom
+              </button>
+              <button
+                type="button"
+                aria-label="Sütik elfogadása"
+                onClick={() => updateAnalyticsConsent('granted')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  isDarkMode
+                    ? 'bg-cyan-500 text-zinc-900 hover:bg-cyan-400'
+                    : 'bg-cyan-600 text-white hover:bg-cyan-500'
+                }`}
+              >
+                Elfogadom
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

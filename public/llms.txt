@@ -1,4 +1,4 @@
-# eurhuf.info
+﻿# eurhuf.info
 
 > Élő devizaárfolyamok és valutaváltó kalkulátor magyar nyelven.
 
@@ -19,9 +19,7 @@ Az eurhuf.info egy ingyenes, valós idejű devizaárfolyam-megjelenítő és kal
 2. **Valutaváltó kalkulátor**: Tetszőleges összeg átváltása bármely támogatott valuta között (EUR, USD, GBP, CHF, HUF)
 3. **Intuitív drag & drop**: A devizakártyák teljes felületükkel megragadhatók és átrendezhetők - személyre szabható sorrend
 4. **Modern, adaptív design**: Professzionális világos és sötét téma közötti váltás, gradiens színekkel és sima animációkkal
-5. **PWA támogatás**: Telepíthető alkalmazásként mobil eszközökre és asztali gépekre
-6. **Offline működés**: Az utolsó ismert árfolyamok automatikusan mentésre kerülnek és internet nélkül is elérhetők
-7. **Mobil-optimalizált**: Teljesen reszponzív design minden képernyőméretre
+5. **Mobil-optimalizált**: Teljesen reszponzív design minden képernyőméretre
 
 ## Gyakran ismételt kérdések
 
@@ -41,7 +39,7 @@ Igen, az eurhuf.info teljesen ingyenes, regisztráció nélkül használható.
 Az árfolyamok a megbízható open.er-api.com szolgáltatásból származnak, amely valós idejű piaci adatokat szolgáltat.
 
 ### Milyen eszközökön működik az oldal?
-Az oldal minden modern böngészőben és eszközön működik: Windows, Mac, Linux, Android, iOS. Progressive Web App technológiával telepíthető is.
+Az oldal minden modern böngészőben és eszközön működik: Windows, Mac, Linux, Android, iOS.
 
 ## Használati esetek
 

@@ -1,4 +1,4 @@
-# eurhuf.info robots.txt
+﻿# eurhuf.info robots.txt
 # Élő devizaárfolyamok és valutaváltó kalkulátor
 
 User-agent: *

@@ -1,17 +1,15 @@
-# EUR/HUF Árfolyam - eurhuf.info
+﻿# EUR/HUF Árfolyam - eurhuf.info
 
 Élő devizaárfolyamok megjelenítése és valutaváltó kalkulátor.
 
-## 🚀 Funkciók
+## Funkciók
 
 - **Élő árfolyamok**: EUR/HUF, USD/HUF, GBP/HUF, CHF/HUF
 - **Valutaváltó kalkulátor**: Tetszőleges összeg átváltása
 - **Drag & drop**: Devizakártyák átrendezése
-- **Sötét/világos mód**: Automatikus témaváltás
-- **PWA támogatás**: Telepíthető alkalmazás
-- **Offline működés**: Utolsó árfolyamok cache-elve
+- **Sötét/világos mód**: Téma váltása
 
-## 🛠️ Technológiák
+## Technológiák
 
 - **React 18** + TypeScript
 - **Vite** - Build tool
@@ -19,13 +17,13 @@
 - **@dnd-kit** - Drag and drop
 - **Lucide React** - Icons
 
-## 📦 Telepítés
+## Telepítés
 
 ```bash
 npm install
 ```
 
-## 🏃 Futtatás (Development)
+## Futtatás (Development)
 
 ```bash
 npm run dev
@@ -33,7 +31,7 @@ npm run dev
 
 Megnyitható: http://localhost:5173
 
-## 🏗️ Build (Production)
+## Build (Production)
 
 ```bash
 npm run build
@@ -41,13 +39,13 @@ npm run build
 
 Build output: `dist/` mappa
 
-## 📤 Deploy (Render.com)
+## Deploy (Render.com)
 
 1. GitHub repo létrehozása és push
 2. Render.com-on új Static Site
 3. Build Command: `npm run build`
 4. Publish Directory: `dist`
 
-## 📄 Licensz
+## Licensz
 
-© 2025 Minusz - Minden jog fenntartva
+© 2026 Minusz - Minden jog fenntartva
