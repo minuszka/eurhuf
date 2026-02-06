@@ -25,6 +25,7 @@ declare global {
     gtag?: (...args: unknown[]) => void;
     clarity?: ((...args: unknown[]) => void) & { q?: unknown[] };
     __gaInitialized?: boolean;
+    __gaScriptLoaded?: boolean;
     [key: string]: unknown;
   }
 }
@@ -43,6 +44,7 @@ type Currency = 'HUF' | 'EUR' | 'USD' | 'GBP' | 'CHF';
 const ANALYTICS_ID = 'G-HFNYDL6KN3';
 const ANALYTICS_STORAGE_KEY = 'analyticsConsent';
 const CLARITY_ID = 'vd9j8te53s';
+const ANALYTICS_SCRIPT_SRC = `https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}`;
 
 const FLAG_URLS = {
   HUF: '/flags/hu.svg',
@@ -63,42 +65,81 @@ interface SortableCurrencyCardProps {
   selectedCurrency: Currency;
 }
 
+const initializeAnalytics = (gaDebug: boolean) => {
+  if (!window.gtag) return;
+
+  if (!window.__gaInitialized) {
+    window.gtag('js', new Date());
+    window.__gaInitialized = true;
+  }
+
+  window.gtag('consent', 'update', {
+    analytics_storage: 'granted',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+  });
+
+  window.gtag('config', ANALYTICS_ID, {
+    anonymize_ip: true,
+    send_page_view: true,
+    transport_type: 'beacon',
+    debug_mode: gaDebug,
+  });
+
+  window.gtag('event', 'page_view', {
+    page_title: document.title,
+    page_location: window.location.href,
+    page_path: window.location.pathname,
+    debug_mode: gaDebug,
+  });
+};
+
 const loadAnalytics = () => {
   const gaDebug = new URLSearchParams(window.location.search).get('ga_debug') === '1';
   window[`ga-disable-${ANALYTICS_ID}`] = false;
-  const existing = document.querySelector(
-    `script[src^="https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}"]`
-  );
-
-  if (!existing) {
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}`;
-    script.onerror = () => {
-      console.warn('Google Analytics script betoltese sikertelen.');
-    };
-    document.head.appendChild(script);
-  }
 
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || ((...args: unknown[]) => {
     window.dataLayer?.push(args);
   });
 
-  if (!window.__gaInitialized) {
-    window.gtag('js', new Date());
-    window.gtag('config', ANALYTICS_ID, {
-      anonymize_ip: true,
-      send_page_view: true,
-      debug_mode: gaDebug,
-    });
-    window.gtag('event', 'page_view', {
-      page_title: document.title,
-      page_location: window.location.href,
-      page_path: window.location.pathname,
-      debug_mode: gaDebug,
-    });
-    window.__gaInitialized = true;
+  const existing = document.querySelector(
+    `script[src^="${ANALYTICS_SCRIPT_SRC}"]`
+  ) as HTMLScriptElement | null;
+
+  if (existing && (window.__gaScriptLoaded || existing.getAttribute('data-ga-loaded') === 'true')) {
+    initializeAnalytics(gaDebug);
+    return;
+  }
+
+  let didInitialize = false;
+  const markLoadedAndInit = () => {
+    if (didInitialize) return;
+    didInitialize = true;
+    window.__gaScriptLoaded = true;
+    if (scriptRef) {
+      scriptRef.setAttribute('data-ga-loaded', 'true');
+    }
+    initializeAnalytics(gaDebug);
+  };
+
+  let scriptRef = existing;
+  if (!scriptRef) {
+    scriptRef = document.createElement('script');
+    scriptRef.async = true;
+    scriptRef.src = ANALYTICS_SCRIPT_SRC;
+    scriptRef.onerror = () => {
+      console.warn('Google Analytics script betoltese sikertelen.');
+    };
+    scriptRef.addEventListener('load', markLoadedAndInit, { once: true });
+    document.head.appendChild(scriptRef);
+    return;
+  }
+
+  scriptRef.addEventListener('load', markLoadedAndInit, { once: true });
+  if ((window as { google_tag_manager?: unknown }).google_tag_manager) {
+    markLoadedAndInit();
   }
 };
 
@@ -273,6 +314,12 @@ function App() {
   const resetAnalyticsConsent = () => {
     localStorage.removeItem(ANALYTICS_STORAGE_KEY);
     window[`ga-disable-${ANALYTICS_ID}`] = true;
+    window.gtag?.('consent', 'update', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    });
     setClarityConsent('denied');
     setAnalyticsConsent(null);
   };
@@ -328,6 +375,15 @@ function App() {
       loadClarity();
       setClarityConsent('granted');
     } else if (analyticsConsent === 'denied') {
+      window[`ga-disable-${ANALYTICS_ID}`] = true;
+      window.gtag?.('consent', 'update', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+      });
+      setClarityConsent('denied');
+    } else {
       window[`ga-disable-${ANALYTICS_ID}`] = true;
       setClarityConsent('denied');
     }
@@ -649,9 +705,6 @@ function App() {
                 GYIK - EUR/HUF arfolyam
               </h2>
               <p className="text-xs leading-relaxed">
-                <strong>Mennyi most az euro forintban?</strong> Az aktualis EUR/HUF arfolyam 30 masodpercenkent frissul.
-              </p>
-              <p className="text-xs leading-relaxed mt-1">
                 <strong>Hogyan valthatom at az eurot forintra?</strong> Ird be az osszeget, valaszd ki a devizat, es azonnal latod az atszamitott erteket.
               </p>
               <p className="text-xs leading-relaxed mt-1">
