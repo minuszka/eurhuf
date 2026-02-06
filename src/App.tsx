@@ -64,6 +64,7 @@ interface SortableCurrencyCardProps {
 }
 
 const loadAnalytics = () => {
+  const gaDebug = new URLSearchParams(window.location.search).get('ga_debug') === '1';
   window[`ga-disable-${ANALYTICS_ID}`] = false;
   const existing = document.querySelector(
     `script[src^="https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}"]`
@@ -89,11 +90,13 @@ const loadAnalytics = () => {
     window.gtag('config', ANALYTICS_ID, {
       anonymize_ip: true,
       send_page_view: true,
+      debug_mode: gaDebug,
     });
     window.gtag('event', 'page_view', {
       page_title: document.title,
       page_location: window.location.href,
       page_path: window.location.pathname,
+      debug_mode: gaDebug,
     });
     window.__gaInitialized = true;
   }
@@ -317,6 +320,11 @@ function App() {
     if (analyticsConsent === 'granted') {
       window[`ga-disable-${ANALYTICS_ID}`] = false;
       loadAnalytics();
+      window.gtag?.('event', 'app_open', {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: window.location.pathname,
+      });
       loadClarity();
       setClarityConsent('granted');
     } else if (analyticsConsent === 'denied') {
