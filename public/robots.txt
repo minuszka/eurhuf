@@ -49,4 +49,5 @@ Allow: /
 Sitemap: https://eurhuf.info/sitemap.xml
 
 # LLMs.txt for AI summaries
-# See: https://eurhuf.info/llms.txt
+# https://eurhuf.info/llms.txt
+# https://eurhuf.info/.well-known/llms.txt

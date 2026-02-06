@@ -23,6 +23,7 @@ declare global {
   interface Window {
     dataLayer?: unknown[];
     gtag?: (...args: unknown[]) => void;
+    clarity?: ((...args: unknown[]) => void) & { q?: unknown[] };
     [key: string]: unknown;
   }
 }
@@ -40,6 +41,7 @@ type Currency = 'HUF' | 'EUR' | 'USD' | 'GBP' | 'CHF';
 
 const ANALYTICS_ID = 'G-HFNYDL6KN3';
 const ANALYTICS_STORAGE_KEY = 'analyticsConsent';
+const CLARITY_ID = 'vd9j8te53s';
 
 const FLAG_URLS = {
   HUF: '/flags/hu.svg',
@@ -78,6 +80,34 @@ const loadAnalytics = () => {
   });
   window.gtag('js', new Date());
   window.gtag('config', ANALYTICS_ID, { anonymize_ip: true });
+};
+
+const loadClarity = () => {
+  const existing = document.querySelector(
+    `script[src^="https://www.clarity.ms/tag/${CLARITY_ID}"]`
+  );
+
+  if (!existing) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.clarity.ms/tag/${CLARITY_ID}`;
+    document.head.appendChild(script);
+  }
+
+  if (!window.clarity) {
+    const clarityStub = (...args: unknown[]) => {
+      (clarityStub.q = clarityStub.q || []).push(args);
+    };
+    window.clarity = clarityStub;
+  }
+};
+
+const setClarityConsent = (value: 'granted' | 'denied') => {
+  if (!window.clarity) return;
+  window.clarity('consentv2', {
+    ad_Storage: 'denied',
+    analytics_Storage: value,
+  });
 };
 
 function SortableCurrencyCard(props: SortableCurrencyCardProps) {
@@ -223,6 +253,7 @@ function App() {
   const resetAnalyticsConsent = () => {
     localStorage.removeItem(ANALYTICS_STORAGE_KEY);
     window[`ga-disable-${ANALYTICS_ID}`] = true;
+    setClarityConsent('denied');
     setAnalyticsConsent(null);
   };
 
@@ -269,8 +300,11 @@ function App() {
     if (analyticsConsent === 'granted') {
       window[`ga-disable-${ANALYTICS_ID}`] = false;
       loadAnalytics();
+      loadClarity();
+      setClarityConsent('granted');
     } else if (analyticsConsent === 'denied') {
       window[`ga-disable-${ANALYTICS_ID}`] = true;
+      setClarityConsent('denied');
     }
   }, [analyticsConsent]);
 

@@ -1,32 +1,12 @@
 ﻿<!DOCTYPE html>
 <html lang="hu">
   <head>
-    <!-- Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HFNYDL6KN3"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-HFNYDL6KN3', {
-        'send_page_view': true,
-        'anonymize_ip': true
-      });
-    </script>
-    
-    <!-- Microsoft Clarity -->
-    <script type="text/javascript">
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "vd9j8te53s");
-    </script>
-    
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EUR/HUF árfolyam ma – Friss euro forint árfolyam élőben | eurhuf.info</title>
     <meta name="description" content="Napi friss EUR/HUF, USD/HUF, GBP/HUF és CHF/HUF árfolyamok élőben. Gyors valutaváltó kalkulátor + ingyenes HUF Snake Turbo játék!" />
     <link rel="canonical" href="https://eurhuf.info/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta property="og:title" content="EUR/HUF árfolyam ma – Friss euro forint árfolyam élőben" />
     <meta property="og:description" content="Napi friss EUR/HUF, USD/HUF, GBP/HUF és CHF/HUF árfolyamok élőben. Gyors valutaváltó kalkulátor + HUF Snake Turbo játék!" />
     <meta property="og:url" content="https://eurhuf.info/" />
@@ -64,12 +44,7 @@
             "name": "eurhuf.info",
             "url": "https://eurhuf.info"
           },
-          "inLanguage": "hu-HU",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://eurhuf.info/?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
+          "inLanguage": "hu-HU"
         },
         {
           "@type": "WebApplication",
@@ -78,6 +53,7 @@
           "url": "https://eurhuf.info",
           "applicationCategory": "FinanceApplication",
           "operatingSystem": "Any",
+          "isAccessibleForFree": true,
           "offers": {
             "@type": "Offer",
             "price": "0",
@@ -153,12 +129,13 @@
     <!-- Basic SEO meta tags -->
     <meta name="keywords" content="EUR/HUF árfolyam, Euro forint árfolyam, EUR to HUF, Euro árfolyam ma, USD/HUF árfolyam, deviza árfolyamok, valutaváltó, pénzváltás" />
     <meta name="author" content="eurhuf.info" />
-    <meta name="robots" content="index, follow" />
+    <meta name="color-scheme" content="dark light" />
     
     <!-- Mobile meta tags -->
     <meta name="theme-color" content="#6366f1" />
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="EURHUF" />
     <meta name="application-name" content="EUR/HUF Árfolyam" />
@@ -175,6 +152,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <section
+      id="faq"
+      aria-label="Gyakran Ismételt Kérdések"
+      style="max-width: 760px; margin: 32px auto 0; padding: 0 16px; font-family: system-ui, -apple-system, Segoe UI, sans-serif; color: #a1a1aa; font-size: 13px; line-height: 1.7;"
+    >
+      <h2 style="margin: 0 0 8px; font-size: 15px; color: #e4e4e7;">GYIK – EUR/HUF árfolyam</h2>
+      <p><strong>Mennyi most az euro forintban?</strong> Az aktuális EUR/HUF árfolyamot az eurhuf.info oldalon találod, amely 30 másodpercenként frissül.</p>
+      <p><strong>Hogyan válthatom át az eurót forintra?</strong> Írd be az összeget, válaszd ki a valutát, és azonnal látod az átszámított értéket.</p>
+      <p><strong>Milyen deviza árfolyamokat mutat az oldal?</strong> EUR/HUF, USD/HUF, GBP/HUF, CHF/HUF élő árfolyamok.</p>
+      <p><strong>Milyen gyakran frissülnek az árfolyamok?</strong> Automatikusan, 30 másodpercenként.</p>
+    </section>
     <script type="module" src="/src/main.tsx"></script>
 
     <!-- Fallback content for SEO (hidden when JS loads) -->

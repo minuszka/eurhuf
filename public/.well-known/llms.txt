@@ -58,3 +58,4 @@ Automatikusan, 30 másodpercenként.
 ## Kapcsolat
 
 - Weboldal: https://eurhuf.info
+
