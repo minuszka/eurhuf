@@ -138,6 +138,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     const saved = localStorage.getItem(CONFIG.HIGHSCORE_KEY);
     return saved ? parseInt(saved, 10) : 0;
   });
+  const [isNewRecord, setIsNewRecord] = useState(false);
   const [level, setLevel] = useState(1);
   const [highLevel, setHighLevel] = useState(() => {
     const saved = localStorage.getItem(CONFIG.HIGHLEVEL_KEY);
@@ -378,7 +379,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     if (!audioCtxRef.current) {
       const ctx = new AudioContextCtor();
       const gain = ctx.createGain();
-      gain.gain.value = 0.08;
+      gain.gain.value = 0.12;
       gain.connect(ctx.destination);
       audioCtxRef.current = ctx;
       audioGainRef.current = gain;
@@ -547,6 +548,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
         if (newScore > highScore) {
           setHighScore(newScore);
           safeSetItem(CONFIG.HIGHSCORE_KEY, newScore.toString());
+          setIsNewRecord(true);
         }
         return newScore;
       });
@@ -564,6 +566,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
               if (newScore > highScore) {
                 setHighScore(newScore);
                 safeSetItem(CONFIG.HIGHSCORE_KEY, newScore.toString());
+                setIsNewRecord(true);
               }
               return newScore;
             });
@@ -896,6 +899,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     ensureAudio();
     hasStartedRef.current = true;
     setHasSavedScore(false);
+    setIsNewRecord(false);
     initGame();
     setGameState('playing');
     lastMoveRef.current = 0;
@@ -1034,6 +1038,11 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     </div>
   );
 
+  const onlineTopScore =
+    hasSupabaseConfig && !hofLoading && hallOfFame.length > 0
+      ? hallOfFame[0].score
+      : null;
+
   return (
     <div className="w-full animate-slide-up" ref={containerRef}>
       {/* Header */}
@@ -1072,12 +1081,22 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
           </div>
           <div className="text-center">
             <div className={`text-xs uppercase tracking-wide ${isDarkMode ? 'text-zinc-500' : 'text-stone-500'}`}>
-              High
+              Saját
             </div>
             <div className={`text-lg font-bold font-mono ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
               {highScore}
             </div>
           </div>
+          {onlineTopScore !== null && (
+            <div className="text-center">
+              <div className={`text-xs uppercase tracking-wide ${isDarkMode ? 'text-zinc-500' : 'text-stone-500'}`}>
+                Top
+              </div>
+              <div className={`text-lg font-bold font-mono ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                {onlineTopScore}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -1202,12 +1221,22 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
               <div className={`text-3xl font-bold font-mono mb-1 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
                 {score} {CONFIG.SCORE_UNIT_NAME}
               </div>
-              {score >= highScore && score > 0 && (
-                <div className="flex items-center justify-center gap-1 text-amber-500 mb-3">
-                  <Trophy className="w-4 h-4" />
-                  <span className="text-sm font-medium">Új rekord!</span>
-                </div>
-              )}
+              {(() => {
+                const hasOnline = hasSupabaseConfig && !hofLoading && hallOfFame.length > 0;
+                const topScore = hasOnline ? hallOfFame[0].score : null;
+                const isGlobalRecord = topScore !== null && score > topScore;
+                const showBadge = hasOnline ? isGlobalRecord : isNewRecord;
+                const label = hasOnline ? 'Új rekord!' : 'Saját rekord!';
+
+                if (!showBadge || score <= 0) return null;
+
+                return (
+                  <div className="flex items-center justify-center gap-1 text-amber-500 mb-3">
+                    <Trophy className="w-4 h-4" />
+                    <span className="text-sm font-medium">{label}</span>
+                  </div>
+                );
+              })()}
               <div className={`text-sm mb-4 ${isDarkMode ? 'text-zinc-400' : 'text-stone-600'}`}>
                 Elért szint: {level}
               </div>
