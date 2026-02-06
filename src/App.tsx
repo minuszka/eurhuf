@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { Euro, DollarSign, PoundSterling, Sun, Moon, AlertCircle } from 'lucide-react';
+import { Euro, DollarSign, PoundSterling, Sun, Moon, AlertCircle, Gamepad2, ArrowLeft } from 'lucide-react';
+import SnakeGame from './SnakeGame';
 import {
   DndContext,
   closestCenter,
@@ -212,6 +213,7 @@ function App() {
     const savedConsent = localStorage.getItem(ANALYTICS_STORAGE_KEY);
     return savedConsent === 'granted' || savedConsent === 'denied' ? savedConsent : null;
   });
+  const [isGameMode, setIsGameMode] = useState(false);
 
   const updateAnalyticsConsent = (value: 'granted' | 'denied') => {
     setAnalyticsConsent(value);
@@ -222,6 +224,10 @@ function App() {
     localStorage.removeItem(ANALYTICS_STORAGE_KEY);
     window[`ga-disable-${ANALYTICS_ID}`] = true;
     setAnalyticsConsent(null);
+  };
+
+  const toggleGameMode = () => {
+    setIsGameMode(prev => !prev);
   };
 
   const sensors = useSensors(
@@ -249,7 +255,7 @@ function App() {
       };
       setRates(newRates);
       localStorage.setItem('cachedRates', JSON.stringify(newRates));
-    } catch (err) {
+    } catch {
       const cachedRates = localStorage.getItem('cachedRates');
       if (!cachedRates) {
         setError('Nem sikerült az árfolyamok betöltése. Kérlek, ellenőrizd az internetkapcsolatot!');
@@ -401,6 +407,24 @@ function App() {
                   <Moon className="w-5 h-5 transition-transform duration-500 rotate-0 hover:-rotate-12" />
                 }
               </button>
+              <button
+                type="button"
+                onClick={toggleGameMode}
+                aria-label={isGameMode ? 'Vissza a kalkulátorhoz' : 'Játék'}
+                aria-pressed={isGameMode}
+                title={isGameMode ? 'Vissza a kalkulátorhoz' : 'HUF Snake Turbo'}
+                className={`p-2.5 rounded-xl transition-all duration-500 transform hover:scale-110 border ${
+                  isDarkMode
+                    ? (isGameMode
+                      ? 'bg-emerald-500 text-zinc-900 border-emerald-400'
+                      : 'bg-zinc-800 text-emerald-400 hover:bg-zinc-700 hover:text-emerald-300 border-zinc-700')
+                    : (isGameMode
+                      ? 'bg-emerald-500 text-white border-emerald-500'
+                      : 'bg-stone-100 text-emerald-600 hover:bg-stone-200 border-stone-300')
+                }`}
+              >
+                {isGameMode ? <ArrowLeft className="w-5 h-5" /> : <Gamepad2 className="w-5 h-5" />}
+              </button>
             </div>
             <div className="mt-5 mb-6 flex gap-3 w-full">
               <div className="relative flex-1 min-w-0 flex">
@@ -469,99 +493,105 @@ function App() {
           </div>
         </div>
 
-        <div className="space-y-4" aria-busy={isLoading}>
-          {error && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className={`p-4 rounded-xl flex items-center gap-3 border ${
-                isDarkMode ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'
-              }`}
-            >
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {isLoading && !rates ? (
-            <div className="grid grid-cols-1 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className={`p-6 rounded-2xl animate-pulse border ${
-                    isDarkMode ? 'bg-zinc-800/50 border-zinc-700/50' : 'bg-stone-100 border-stone-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`w-8 h-8 rounded-full ${
-                      isDarkMode ? 'bg-zinc-700' : 'bg-stone-300'
-                    }`}></div>
-                    <div className={`w-14 h-9 rounded ${
-                      isDarkMode ? 'bg-zinc-700' : 'bg-stone-300'
-                    }`}></div>
-                  </div>
-                  <div className={`w-24 h-10 rounded ${
-                    isDarkMode ? 'bg-zinc-700' : 'bg-stone-300'
-                  }`}></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <p id="currency-order-help" className="sr-only">
-                A kártyák sorrendje húzással állítható.
-              </p>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={currencyOrder}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="grid grid-cols-1 gap-4" role="list" aria-describedby="currency-order-help">
-                    {currencyOrder.map((currency) => (
-                      <SortableCurrencyCard
-                        key={currency}
-                        {...getCurrencyCardProps(currency)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </>
-          )}
+        <div className={`${isGameMode ? 'block' : 'hidden'} mt-2`}>
+          <SnakeGame isDarkMode={isDarkMode} isVisible={isGameMode} onClose={() => setIsGameMode(false)} />
         </div>
 
-        <div className="mt-6 space-y-4">
-          <div className={`p-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] border ${
-            isDarkMode ? 'bg-zinc-800/50 border-zinc-700/50 hover:border-cyan-600/50' : 'bg-amber-50/50 border-stone-200 hover:border-amber-300'
-          } hover:shadow-lg`}>
-            <a
-              href="https://revolut.com/referral/?referral-code=roland309s!MAR1-25-AR-H1"
-              target="_blank"
-              rel="noopener noreferrer sponsored nofollow"
-              className="block text-center"
-            >
-              <p className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-stone-600'}`}>
-                💳 Nyiss Revolut számlát és használd az ingyenes nemzetközi utalásokat!
-              </p>
-            </a>
+        <div className={isGameMode ? 'hidden' : ''}>
+          <div className="space-y-4" aria-busy={isLoading}>
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className={`p-4 rounded-xl flex items-center gap-3 border ${
+                  isDarkMode ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'
+                }`}
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            {isLoading && !rates ? (
+              <div className="grid grid-cols-1 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className={`p-6 rounded-2xl animate-pulse border ${
+                      isDarkMode ? 'bg-zinc-800/50 border-zinc-700/50' : 'bg-stone-100 border-stone-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-8 h-8 rounded-full ${
+                        isDarkMode ? 'bg-zinc-700' : 'bg-stone-300'
+                      }`}></div>
+                      <div className={`w-14 h-9 rounded ${
+                        isDarkMode ? 'bg-zinc-700' : 'bg-stone-300'
+                      }`}></div>
+                    </div>
+                    <div className={`w-24 h-10 rounded ${
+                      isDarkMode ? 'bg-zinc-700' : 'bg-stone-300'
+                    }`}></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <p id="currency-order-help" className="sr-only">
+                  A kártyák sorrendje húzással állítható.
+                </p>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={currencyOrder}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="grid grid-cols-1 gap-4" role="list" aria-describedby="currency-order-help">
+                      {currencyOrder.map((currency) => (
+                        <SortableCurrencyCard
+                          key={currency}
+                          {...getCurrencyCardProps(currency)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </>
+            )}
           </div>
 
-          <p className={`text-sm text-center px-4 ${isDarkMode ? 'text-zinc-500' : 'text-stone-500'}`}>
-            A megjelenített árfolyam középárfolyam, amely a bankoknál és pénzváltóknál kis mértékben eltérhet. Eladásnál általában alacsonyabb, vásárlásnál magasabb árfolyamot használnak.
-          </p>
-          <div className={`text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
-            <span>© 2026 Minusz</span>
-            <button
-              type="button"
-              onClick={resetAnalyticsConsent}
-              className={`ml-2 underline underline-offset-2 ${isDarkMode ? 'text-zinc-400 hover:text-zinc-300' : 'text-stone-500 hover:text-stone-700'}`}
-            >
-              Süti beállítások
-            </button>
+          <div className="mt-6 space-y-4">
+            <div className={`p-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] border ${
+              isDarkMode ? 'bg-zinc-800/50 border-zinc-700/50 hover:border-cyan-600/50' : 'bg-amber-50/50 border-stone-200 hover:border-amber-300'
+            } hover:shadow-lg`}>
+              <a
+                href="https://revolut.com/referral/?referral-code=roland309s!MAR1-25-AR-H1"
+                target="_blank"
+                rel="noopener noreferrer sponsored nofollow"
+                className="block text-center"
+              >
+                <p className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-stone-600'}`}>
+                  💳 Nyiss Revolut számlát és használd az ingyenes nemzetközi utalásokat!
+                </p>
+              </a>
+            </div>
+
+            <p className={`text-sm text-center px-4 ${isDarkMode ? 'text-zinc-500' : 'text-stone-500'}`}>
+              A megjelenített árfolyam középárfolyam, amely a bankoknál és pénzváltóknál kis mértékben eltérhet. Eladásnál általában alacsonyabb, vásárlásnál magasabb árfolyamot használnak.
+            </p>
+            <div className={`text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
+              <span>© 2026 Minusz</span>
+              <button
+                type="button"
+                onClick={resetAnalyticsConsent}
+                className={`ml-2 underline underline-offset-2 ${isDarkMode ? 'text-zinc-400 hover:text-zinc-300' : 'text-stone-500 hover:text-stone-700'}`}
+              >
+                Süti beállítások
+              </button>
+            </div>
           </div>
         </div>
       </div>
