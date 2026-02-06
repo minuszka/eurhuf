@@ -102,6 +102,12 @@ const _scoreToHuf = (score: number): number => {
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 type Position = { x: number; y: number };
 type GameState = 'menu' | 'playing' | 'paused' | 'gameover' | 'levelclear';
+type EnemyKind = 'ant' | 'crab' | 'void';
+
+interface EnemyCell extends Position {
+  kind: EnemyKind;
+  phase: number;
+}
 
 interface Particle {
   x: number;
@@ -161,6 +167,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
   const foodRef = useRef<Position>({ x: 10, y: 7 });
   const speedRef = useRef(CONFIG.INITIAL_SPEED);
   const particlesRef = useRef<Particle[]>([]);
+  const enemiesRef = useRef<EnemyCell[]>([]);
   const backgroundOffsetRef = useRef(0);
   const hofRequestIdRef = useRef(0);
   const hallOfFameRef = useRef<HallOfFameEntry[]>([]);
@@ -317,13 +324,65 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
       }
       void supabase.removeChannel(channel);
     };
-  }, [hasSupabaseConfig, supabase]);
+  }, []);
 
   // ============================================================================
   // Initialize/Reset game
   // ============================================================================
+  const spawnEnemiesForLevel = useCallback((targetLevel: number, snake: Position[]) => {
+    const enemyCount = Math.max(0, targetLevel - 1);
+    if (enemyCount === 0) {
+      enemiesRef.current = [];
+      return;
+    }
+
+    const blocked = new Set<string>();
+    const kinds: EnemyKind[] = ['ant', 'crab', 'void'];
+    const toKey = (x: number, y: number) => `${x},${y}`;
+
+    snake.forEach((segment) => blocked.add(toKey(segment.x, segment.y)));
+
+    // Keep the immediate head area clear on level start.
+    const head = snake[0];
+    if (head) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const x = head.x + dx;
+          const y = head.y + dy;
+          if (x >= 0 && x < CONFIG.GRID_SIZE && y >= 0 && y < CONFIG.GRID_SIZE) {
+            blocked.add(toKey(x, y));
+          }
+        }
+      }
+    }
+
+    const enemies: EnemyCell[] = [];
+    let attempts = 0;
+    while (enemies.length < enemyCount && attempts < 4000) {
+      attempts++;
+      const x = Math.floor(Math.random() * CONFIG.GRID_SIZE);
+      const y = Math.floor(Math.random() * CONFIG.GRID_SIZE);
+      const key = toKey(x, y);
+      if (blocked.has(key)) continue;
+
+      blocked.add(key);
+      enemies.push({
+        x,
+        y,
+        kind: kinds[Math.floor(Math.random() * kinds.length)],
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    enemiesRef.current = enemies;
+  }, []);
+
   const spawnFood = useCallback(() => {
     const snake = snakeRef.current;
+    const enemies = enemiesRef.current;
+    const isBlocked = (pos: Position) =>
+      snake.some(seg => seg.x === pos.x && seg.y === pos.y) ||
+      enemies.some(enemy => enemy.x === pos.x && enemy.y === pos.y);
     let newFood: Position;
     let attempts = 0;
 
@@ -334,9 +393,22 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
       };
       attempts++;
     } while (
-      snake.some(seg => seg.x === newFood.x && seg.y === newFood.y) &&
-      attempts < 100
+      isBlocked(newFood) &&
+      attempts < 300
     );
+
+    if (isBlocked(newFood)) {
+      for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
+        for (let x = 0; x < CONFIG.GRID_SIZE; x++) {
+          const candidate = { x, y };
+          if (!isBlocked(candidate)) {
+            newFood = candidate;
+            y = CONFIG.GRID_SIZE;
+            break;
+          }
+        }
+      }
+    }
 
     foodRef.current = newFood;
   }, []);
@@ -356,6 +428,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     speedRef.current = CONFIG.INITIAL_SPEED - (effectiveLevel - 1) * 10; // Faster on higher levels
     speedRef.current = Math.max(speedRef.current, CONFIG.MIN_SPEED);
     particlesRef.current = [];
+    spawnEnemiesForLevel(effectiveLevel, snakeRef.current);
 
     if (!keepScore) {
       setScore(0);
@@ -364,7 +437,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     }
 
     spawnFood();
-  }, [level, spawnFood]);
+  }, [level, spawnFood, spawnEnemiesForLevel]);
 
   // ============================================================================
   // Audio effects
@@ -534,6 +607,15 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
       return;
     }
 
+    // Enemy collision
+    const hitEnemy = enemiesRef.current.some(enemy => enemy.x === head.x && enemy.y === head.y);
+    if (hitEnemy) {
+      createParticles(head.x, head.y, 18, '#ef4444');
+      playGameOverSound();
+      setGameState('gameover');
+      return;
+    }
+
     // Move snake
     snake.unshift(head);
 
@@ -600,6 +682,8 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     const cellSize = canvasSize.width / CONFIG.GRID_SIZE;
     const snake = snakeRef.current;
     const food = foodRef.current;
+    const enemies = enemiesRef.current;
+    const animationTime = Date.now() * 0.004;
 
     // Clear canvas
     ctx.fillStyle = isDarkMode ? '#18181b' : '#fafaf9';
@@ -671,6 +755,127 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
       ctx.arcTo(x, y, x + size, y, r);
       ctx.closePath();
     };
+
+    const drawEnemy = (enemy: EnemyCell) => {
+      const x = enemy.x * cellSize;
+      const y = enemy.y * cellSize;
+      const cx = x + cellSize / 2;
+      const cy = y + cellSize / 2;
+      const t = animationTime + enemy.phase;
+
+      if (enemy.kind === 'void') {
+        const pulse = 1 + Math.sin(t * 1.6) * 0.07;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(pulse, pulse);
+
+        const outer = cellSize * 0.42;
+        ctx.fillStyle = isDarkMode ? '#111827' : '#1f2937';
+        ctx.beginPath();
+        ctx.arc(0, 0, outer, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.45)';
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.07);
+        for (let i = 0; i < 4; i++) {
+          const start = t * 1.6 + i * (Math.PI / 2);
+          ctx.beginPath();
+          ctx.arc(0, 0, outer * 0.72, start, start + Math.PI * 0.9);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.arc(0, 0, outer * 0.38, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      if (enemy.kind === 'ant') {
+        const legSwing = Math.sin(t * 5) * cellSize * 0.04;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.07);
+
+        for (let i = -1; i <= 1; i++) {
+          const yOffset = i * cellSize * 0.16;
+          ctx.beginPath();
+          ctx.moveTo(-cellSize * 0.12, yOffset);
+          ctx.lineTo(-cellSize * 0.38, yOffset - legSwing + i * 2);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(cellSize * 0.12, yOffset);
+          ctx.lineTo(cellSize * 0.38, yOffset + legSwing + i * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(0, -cellSize * 0.2, cellSize * 0.12, 0, Math.PI * 2);
+        ctx.arc(0, 0, cellSize * 0.15, 0, Math.PI * 2);
+        ctx.arc(0, cellSize * 0.2, cellSize * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#111827';
+        ctx.beginPath();
+        ctx.arc(-cellSize * 0.05, -cellSize * 0.22, cellSize * 0.02, 0, Math.PI * 2);
+        ctx.arc(cellSize * 0.05, -cellSize * 0.22, cellSize * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      const clawSwing = Math.sin(t * 4) * 0.3;
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      ctx.strokeStyle = '#ea580c';
+      ctx.lineWidth = Math.max(1.5, cellSize * 0.065);
+      for (let i = -1; i <= 1; i++) {
+        const yOffset = cellSize * 0.06 + i * cellSize * 0.12;
+        ctx.beginPath();
+        ctx.moveTo(-cellSize * 0.16, yOffset);
+        ctx.lineTo(-cellSize * 0.34, yOffset + cellSize * 0.09);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cellSize * 0.16, yOffset);
+        ctx.lineTo(cellSize * 0.34, yOffset + cellSize * 0.09);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.ellipse(0, cellSize * 0.06, cellSize * 0.24, cellSize * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = Math.max(2, cellSize * 0.09);
+      ctx.beginPath();
+      ctx.arc(-cellSize * 0.28, -cellSize * 0.03, cellSize * 0.1, Math.PI * (0.3 + clawSwing), Math.PI * 1.35);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cellSize * 0.28, -cellSize * 0.03, cellSize * 0.1, Math.PI * (1.65), Math.PI * (2.7 - clawSwing));
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(-cellSize * 0.08, -cellSize * 0.14, cellSize * 0.05, 0, Math.PI * 2);
+      ctx.arc(cellSize * 0.08, -cellSize * 0.14, cellSize * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#111827';
+      ctx.beginPath();
+      ctx.arc(-cellSize * 0.08, -cellSize * 0.14, cellSize * 0.022, 0, Math.PI * 2);
+      ctx.arc(cellSize * 0.08, -cellSize * 0.14, cellSize * 0.022, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    enemies.forEach((enemy) => drawEnemy(enemy));
 
     // Draw snake
     snake.forEach((segment, index) => {
@@ -913,15 +1118,13 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
   };
 
   const nextLevel = () => {
-    setLevel(prev => {
-      const newLevel = prev + 1;
-      if (newLevel > highLevel) {
-        setHighLevel(newLevel);
-        safeSetItem(CONFIG.HIGHLEVEL_KEY, newLevel.toString());
-      }
-      speedRef.current = Math.max(CONFIG.INITIAL_SPEED - (newLevel - 1) * 10, CONFIG.MIN_SPEED);
-      return newLevel;
-    });
+    const newLevel = level + 1;
+    setLevel(newLevel);
+    if (newLevel > highLevel) {
+      setHighLevel(newLevel);
+      safeSetItem(CONFIG.HIGHLEVEL_KEY, newLevel.toString());
+    }
+    speedRef.current = Math.max(CONFIG.INITIAL_SPEED - (newLevel - 1) * 10, CONFIG.MIN_SPEED);
     setFoodEatenThisLevel(0);
 
     // Keep snake but reset position
@@ -934,6 +1137,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     ];
     directionRef.current = 'RIGHT';
     inputQueueRef.current = [];
+    spawnEnemiesForLevel(newLevel, snakeRef.current);
     spawnFood();
     setGameState('playing');
   };
@@ -1335,7 +1539,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
 
       {/* Footer info */}
       <div className={`mt-3 text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
-        Rekord szint: {highLevel} | {CONFIG.FOOD_PER_LEVEL} étel = 1 szint (+{CONFIG.LEVEL_CLEAR_SCORE} bónusz)
+        Rekord szint: {highLevel} | Akadályok: {Math.max(0, level - 1)} | {CONFIG.FOOD_PER_LEVEL} étel = 1 szint (+{CONFIG.LEVEL_CLEAR_SCORE} bónusz)
       </div>
 
       {(hallOfFame.length > 0 || hasSupabaseConfig || hofError) && (

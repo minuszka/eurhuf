@@ -24,6 +24,7 @@ declare global {
     dataLayer?: unknown[];
     gtag?: (...args: unknown[]) => void;
     clarity?: ((...args: unknown[]) => void) & { q?: unknown[] };
+    __gaInitialized?: boolean;
     [key: string]: unknown;
   }
 }
@@ -63,6 +64,7 @@ interface SortableCurrencyCardProps {
 }
 
 const loadAnalytics = () => {
+  window[`ga-disable-${ANALYTICS_ID}`] = false;
   const existing = document.querySelector(
     `script[src^="https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}"]`
   );
@@ -71,6 +73,9 @@ const loadAnalytics = () => {
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}`;
+    script.onerror = () => {
+      console.warn('Google Analytics script betoltese sikertelen.');
+    };
     document.head.appendChild(script);
   }
 
@@ -78,8 +83,20 @@ const loadAnalytics = () => {
   window.gtag = window.gtag || ((...args: unknown[]) => {
     window.dataLayer?.push(args);
   });
-  window.gtag('js', new Date());
-  window.gtag('config', ANALYTICS_ID, { anonymize_ip: true });
+
+  if (!window.__gaInitialized) {
+    window.gtag('js', new Date());
+    window.gtag('config', ANALYTICS_ID, {
+      anonymize_ip: true,
+      send_page_view: true,
+    });
+    window.gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+    });
+    window.__gaInitialized = true;
+  }
 };
 
 const loadClarity = () => {
@@ -413,7 +430,7 @@ function App() {
         <h1 className={`text-xs text-center mb-6 ${
           isDarkMode ? 'text-zinc-500' : 'text-stone-500'
         }`}>
-          Élő devizaárfolyamok – EUR/HUF, USD/HUF, CHF/HUF, GBP/HUF
+          Devizaárfolyamok – EUR/HUF, USD/HUF, CHF/HUF, GBP/HUF
         </h1>
 
         <div className="flex justify-between items-start mb-6">
@@ -613,9 +630,26 @@ function App() {
               </a>
             </div>
 
-            <p className={`text-sm text-center px-4 ${isDarkMode ? 'text-zinc-500' : 'text-stone-500'}`}>
-              A megjelenített árfolyam középárfolyam, amely a bankoknál és pénzváltóknál kis mértékben eltérhet. Eladásnál általában alacsonyabb, vásárlásnál magasabb árfolyamot használnak.
-            </p>
+            <section
+              id="faq"
+              aria-label="Gyakran Ismételt Kérdések"
+              className={`p-4 rounded-2xl border ${
+                isDarkMode ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400' : 'bg-stone-50 border-stone-200 text-stone-600'
+              }`}
+            >
+              <h2 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-zinc-200' : 'text-stone-800'}`}>
+                GYIK - EUR/HUF arfolyam
+              </h2>
+              <p className="text-xs leading-relaxed">
+                <strong>Mennyi most az euro forintban?</strong> Az aktualis EUR/HUF arfolyam 30 masodpercenkent frissul.
+              </p>
+              <p className="text-xs leading-relaxed mt-1">
+                <strong>Hogyan valthatom at az eurot forintra?</strong> Ird be az osszeget, valaszd ki a devizat, es azonnal latod az atszamitott erteket.
+              </p>
+              <p className="text-xs leading-relaxed mt-1">
+                <strong>Milyen deviza arfolyamokat mutat az oldal?</strong> EUR/HUF, USD/HUF, GBP/HUF es CHF/HUF.
+              </p>
+            </section>
             <div className={`text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
               <span>© 2026 Minusz</span>
               <button
