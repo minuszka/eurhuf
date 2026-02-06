@@ -1,7 +1,7 @@
 ﻿{
-  "name": "EUR/HUF Árfolyam",
+  "name": "EUR/HUF Árfolyam + Snake Game",
   "short_name": "EURHUF",
-  "description": "Élő euro-forint és deviza árfolyamok",
+  "description": "Élő euro-forint árfolyamok + HUF Snake Turbo játék",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1d4ed8",
