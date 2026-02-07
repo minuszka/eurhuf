@@ -67,36 +67,6 @@ interface SortableCurrencyCardProps {
   selectedCurrency: Currency;
 }
 
-const initializeAnalytics = (gaDebug: boolean) => {
-  if (!window.gtag) return;
-
-  if (!window.__gaInitialized) {
-    window.gtag('js', new Date());
-    window.__gaInitialized = true;
-  }
-
-  window.gtag('consent', 'update', {
-    analytics_storage: 'granted',
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
-  });
-
-  window.gtag('config', ANALYTICS_ID, {
-    anonymize_ip: true,
-    send_page_view: true,
-    transport_type: 'beacon',
-    debug_mode: gaDebug,
-  });
-
-  window.gtag('event', 'page_view', {
-    page_title: document.title,
-    page_location: window.location.href,
-    page_path: window.location.pathname,
-    debug_mode: gaDebug,
-  });
-};
-
 const getOrCreateGaFallbackClientId = () => {
   const existing = localStorage.getItem(GA_FALLBACK_CLIENT_ID_KEY);
   if (existing) return existing;
@@ -123,14 +93,14 @@ const sendAnalyticsFallback = (reason: string) => {
       ep_reason: reason,
     });
 
-    const url = `https://www.google-analytics.com/g/collect?${params.toString()}`;
+    const url = `https://www.google-analytics.com/mp/collect?${params.toString()}`;
     if (navigator.sendBeacon) {
       navigator.sendBeacon(url, '');
       return;
     }
 
     void fetch(url, {
-      method: 'GET',
+      method: 'POST',
       mode: 'no-cors',
       keepalive: true,
     });
@@ -143,63 +113,61 @@ const loadAnalytics = () => {
   const gaDebug = new URLSearchParams(window.location.search).get('ga_debug') === '1';
   window[`ga-disable-${ANALYTICS_ID}`] = false;
 
+  // Standard gtag.js setup
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || ((...args: unknown[]) => {
     window.dataLayer?.push(args);
   });
 
-  const existing = document.querySelector(
-    `script[src^="${ANALYTICS_SCRIPT_SRC}"]`
-  ) as HTMLScriptElement | null;
+  // Always update consent (handles revoke + re-grant)
+  window.gtag('consent', 'update', {
+    analytics_storage: 'granted',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+  });
 
-  if (existing && (window.__gaScriptLoaded || existing.getAttribute('data-ga-loaded') === 'true')) {
-    initializeAnalytics(gaDebug);
-    return;
+  // Standard GA4 pattern: push config to dataLayer BEFORE script loads.
+  // When gtag.js loads, it processes these queued commands.
+  if (!window.__gaInitialized) {
+    window.gtag('js', new Date());
+    window.gtag('config', ANALYTICS_ID, {
+      send_page_view: true,
+      transport_type: 'beacon',
+      debug_mode: gaDebug,
+    });
+    window.gtag('event', 'app_open', {
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+    });
+    window.__gaInitialized = true;
   }
 
-  let fallbackTimeoutId: number | undefined;
-  const scheduleFallback = (reason: string) => {
-    if (window.__gaScriptLoaded || window.__gaInitialized) return;
-    sendAnalyticsFallback(reason);
+  // Load gtag.js script if not already present
+  if (document.querySelector(`script[src^="${ANALYTICS_SCRIPT_SRC}"]`)) return;
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = ANALYTICS_SCRIPT_SRC;
+
+  script.onerror = () => {
+    console.warn('Google Analytics script betoltese sikertelen.');
+    sendAnalyticsFallback('script_error');
   };
 
-  fallbackTimeoutId = window.setTimeout(() => {
-    scheduleFallback('script_timeout');
+  const timeoutId = window.setTimeout(() => {
+    if (!window.__gaScriptLoaded) {
+      sendAnalyticsFallback('script_timeout');
+    }
   }, 4000);
 
-  let didInitialize = false;
-  const markLoadedAndInit = () => {
-    if (didInitialize) return;
-    didInitialize = true;
-    if (fallbackTimeoutId) {
-      window.clearTimeout(fallbackTimeoutId);
-      fallbackTimeoutId = undefined;
-    }
+  script.addEventListener('load', () => {
     window.__gaScriptLoaded = true;
-    if (scriptRef) {
-      scriptRef.setAttribute('data-ga-loaded', 'true');
-    }
-    initializeAnalytics(gaDebug);
-  };
+    window.clearTimeout(timeoutId);
+  }, { once: true });
 
-  let scriptRef = existing;
-  if (!scriptRef) {
-    scriptRef = document.createElement('script');
-    scriptRef.async = true;
-    scriptRef.src = ANALYTICS_SCRIPT_SRC;
-    scriptRef.onerror = () => {
-      console.warn('Google Analytics script betoltese sikertelen.');
-      scheduleFallback('script_error');
-    };
-    scriptRef.addEventListener('load', markLoadedAndInit, { once: true });
-    document.head.appendChild(scriptRef);
-    return;
-  }
-
-  scriptRef.addEventListener('load', markLoadedAndInit, { once: true });
-  if ((window as { google_tag_manager?: unknown }).google_tag_manager) {
-    markLoadedAndInit();
-  }
+  document.head.appendChild(script);
 };
 
 const loadClarity = () => {
@@ -424,13 +392,7 @@ function App() {
 
   useEffect(() => {
     if (analyticsConsent === 'granted') {
-      window[`ga-disable-${ANALYTICS_ID}`] = false;
       loadAnalytics();
-      window.gtag?.('event', 'app_open', {
-        page_title: document.title,
-        page_location: window.location.href,
-        page_path: window.location.pathname,
-      });
       loadClarity();
       setClarityConsent('granted');
     } else if (analyticsConsent === 'denied') {
