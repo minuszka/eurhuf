@@ -68,9 +68,12 @@ const loadAnalytics = () => {
 
   // Standard gtag.js setup.
   window.dataLayer = window.dataLayer || [];
-  window.gtag = window.gtag || ((...args: unknown[]) => {
-    window.dataLayer?.push(args);
-  });
+  if (!window.gtag) {
+    window.gtag = function gtag() {
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer?.push(arguments);
+    } as (...args: unknown[]) => void;
+  }
 
   // Consent mode defaults (analytics enabled, ads disabled).
   window.gtag('consent', 'default', {
