@@ -102,7 +102,7 @@ const _scoreToHuf = (score: number): number => {
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 type Position = { x: number; y: number };
 type GameState = 'menu' | 'playing' | 'paused' | 'gameover' | 'levelclear';
-type EnemyKind = 'ant' | 'crab' | 'void';
+type EnemyKind = 'ant' | 'crab' | 'monitor';
 
 interface EnemyCell extends Position {
   kind: EnemyKind;
@@ -337,7 +337,7 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
     }
 
     const blocked = new Set<string>();
-    const kinds: EnemyKind[] = ['ant', 'crab', 'void'];
+    const kinds: EnemyKind[] = ['ant', 'crab', 'monitor'];
     const toKey = (x: number, y: number) => `${x},${y}`;
 
     snake.forEach((segment) => blocked.add(toKey(segment.x, segment.y)));
@@ -763,35 +763,6 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
       const cy = y + cellSize / 2;
       const t = animationTime + enemy.phase;
 
-      if (enemy.kind === 'void') {
-        const pulse = 1 + Math.sin(t * 1.6) * 0.07;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(pulse, pulse);
-
-        const outer = cellSize * 0.42;
-        ctx.fillStyle = isDarkMode ? '#111827' : '#1f2937';
-        ctx.beginPath();
-        ctx.arc(0, 0, outer, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.45)';
-        ctx.lineWidth = Math.max(1.5, cellSize * 0.07);
-        for (let i = 0; i < 4; i++) {
-          const start = t * 1.6 + i * (Math.PI / 2);
-          ctx.beginPath();
-          ctx.arc(0, 0, outer * 0.72, start, start + Math.PI * 0.9);
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = '#020617';
-        ctx.beginPath();
-        ctx.arc(0, 0, outer * 0.38, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        return;
-      }
-
       if (enemy.kind === 'ant') {
         const legSwing = Math.sin(t * 5) * cellSize * 0.04;
         ctx.save();
@@ -828,62 +799,114 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
         return;
       }
 
-      const clawSwing = Math.sin(t * 4) * 0.3;
-      const tentacleSwing = Math.sin(t * 5.5) * cellSize * 0.12;
+      if (enemy.kind === 'monitor') {
+        // Every enemy stays inside a single grid cell.
+        const frameW = cellSize * 0.68;
+        const frameH = cellSize * 0.46;
+        const frameX = -frameW / 2;
+        const frameY = -cellSize * 0.28;
+        const screenPad = cellSize * 0.05;
+        const arrowBlink = 0.35 + ((Math.sin(t * 8) + 1) / 2) * 0.65;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        ctx.fillStyle = isDarkMode ? '#1f2937' : '#334155';
+        ctx.strokeStyle = isDarkMode ? '#64748b' : '#1e293b';
+        ctx.lineWidth = Math.max(1.3, cellSize * 0.06);
+        ctx.fillRect(frameX, frameY, frameW, frameH);
+        ctx.strokeRect(frameX, frameY, frameW, frameH);
+
+        ctx.fillStyle = isDarkMode ? '#0b1220' : '#0f172a';
+        ctx.fillRect(
+          frameX + screenPad,
+          frameY + screenPad,
+          frameW - screenPad * 2,
+          frameH - screenPad * 2
+        );
+
+        ctx.fillStyle = isDarkMode ? '#475569' : '#334155';
+        ctx.fillRect(-cellSize * 0.055, frameY + frameH + cellSize * 0.03, cellSize * 0.11, cellSize * 0.08);
+        ctx.fillRect(-cellSize * 0.17, frameY + frameH + cellSize * 0.11, cellSize * 0.34, cellSize * 0.06);
+
+        const arrowCenterY = frameY + frameH * 0.45;
+        const arrowW = cellSize * 0.16;
+        const arrowH = cellSize * 0.18;
+        ctx.globalAlpha = arrowBlink;
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-cellSize * 0.03, arrowCenterY - arrowH * 0.95, cellSize * 0.06, arrowH * 0.55);
+        ctx.beginPath();
+        ctx.moveTo(0, arrowCenterY + arrowH / 2);
+        ctx.lineTo(-arrowW / 2, arrowCenterY - arrowH / 2);
+        ctx.lineTo(arrowW / 2, arrowCenterY - arrowH / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+        return;
+      }
+
+      const legSwing = Math.sin(t * 6.4) * cellSize * 0.07;
+      const tentacleSwing = Math.sin(t * 5.2) * cellSize * 0.08;
+      const clawSwing = Math.sin(t * 4.6) * 0.35;
       ctx.save();
       ctx.translate(cx, cy);
 
-      // Animated tentacles/antennae
+      // Crab tentacles.
       ctx.strokeStyle = '#fb7185';
-      ctx.lineWidth = Math.max(1.6, cellSize * 0.07);
+      ctx.lineWidth = Math.max(1.4, cellSize * 0.065);
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(-cellSize * 0.08, -cellSize * 0.06);
+      ctx.moveTo(-cellSize * 0.09, -cellSize * 0.08);
       ctx.quadraticCurveTo(
-        -cellSize * 0.27,
-        -cellSize * 0.26 - tentacleSwing,
+        -cellSize * 0.3,
+        -cellSize * 0.3 - tentacleSwing,
         -cellSize * 0.34,
-        -cellSize * 0.42 - tentacleSwing
+        -cellSize * 0.46 - tentacleSwing
       );
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(cellSize * 0.08, -cellSize * 0.06);
+      ctx.moveTo(cellSize * 0.09, -cellSize * 0.08);
       ctx.quadraticCurveTo(
-        cellSize * 0.27,
-        -cellSize * 0.26 + tentacleSwing,
+        cellSize * 0.3,
+        -cellSize * 0.3 + tentacleSwing,
         cellSize * 0.34,
-        -cellSize * 0.42 + tentacleSwing
+        -cellSize * 0.46 + tentacleSwing
       );
       ctx.stroke();
 
+      // Crab walking legs.
       ctx.strokeStyle = '#ea580c';
       ctx.lineWidth = Math.max(1.5, cellSize * 0.065);
       for (let i = -1; i <= 1; i++) {
-        const yOffset = cellSize * 0.06 + i * cellSize * 0.12;
+        const yOffset = cellSize * 0.05 + i * cellSize * 0.12;
         ctx.beginPath();
-        ctx.moveTo(-cellSize * 0.16, yOffset);
-        ctx.lineTo(-cellSize * 0.34, yOffset + cellSize * 0.09);
+        ctx.moveTo(-cellSize * 0.14, yOffset);
+        ctx.lineTo(-cellSize * 0.36, yOffset + cellSize * 0.08 + legSwing + i * cellSize * 0.01);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.moveTo(cellSize * 0.16, yOffset);
-        ctx.lineTo(cellSize * 0.34, yOffset + cellSize * 0.09);
+        ctx.moveTo(cellSize * 0.14, yOffset);
+        ctx.lineTo(cellSize * 0.36, yOffset + cellSize * 0.08 - legSwing + i * cellSize * 0.01);
         ctx.stroke();
       }
 
+      // Body.
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
       ctx.ellipse(0, cellSize * 0.06, cellSize * 0.24, cellSize * 0.18, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // Claws.
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = Math.max(2, cellSize * 0.09);
       ctx.beginPath();
-      ctx.arc(-cellSize * 0.28, -cellSize * 0.03, cellSize * 0.1, Math.PI * (0.3 + clawSwing), Math.PI * 1.35);
+      ctx.arc(-cellSize * 0.28, -cellSize * 0.02, cellSize * 0.1, Math.PI * (0.25 + clawSwing), Math.PI * 1.4);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(cellSize * 0.28, -cellSize * 0.03, cellSize * 0.1, Math.PI * (1.65), Math.PI * (2.7 - clawSwing));
+      ctx.arc(cellSize * 0.28, -cellSize * 0.02, cellSize * 0.1, Math.PI * 1.6, Math.PI * (2.75 - clawSwing));
       ctx.stroke();
 
       ctx.fillStyle = '#f8fafc';
