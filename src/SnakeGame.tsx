@@ -829,8 +829,33 @@ export default function SnakeGame({ isDarkMode, onClose, isVisible }: SnakeGameP
       }
 
       const clawSwing = Math.sin(t * 4) * 0.3;
+      const tentacleSwing = Math.sin(t * 5.5) * cellSize * 0.04;
       ctx.save();
       ctx.translate(cx, cy);
+
+      // Animated tentacles/antennae
+      ctx.strokeStyle = '#fb7185';
+      ctx.lineWidth = Math.max(1.2, cellSize * 0.055);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-cellSize * 0.08, -cellSize * 0.06);
+      ctx.quadraticCurveTo(
+        -cellSize * 0.24,
+        -cellSize * 0.26 - tentacleSwing,
+        -cellSize * 0.3,
+        -cellSize * 0.42 - tentacleSwing
+      );
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(cellSize * 0.08, -cellSize * 0.06);
+      ctx.quadraticCurveTo(
+        cellSize * 0.24,
+        -cellSize * 0.26 + tentacleSwing,
+        cellSize * 0.3,
+        -cellSize * 0.42 + tentacleSwing
+      );
+      ctx.stroke();
 
       ctx.strokeStyle = '#ea580c';
       ctx.lineWidth = Math.max(1.5, cellSize * 0.065);

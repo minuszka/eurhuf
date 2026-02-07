@@ -1,4 +1,6 @@
-﻿# EUR/HUF Árfolyam - eurhuf.info
+﻿Repo: https://github.com/minuszka/eurhuf
+
+# EUR/HUF Árfolyam - eurhuf.info
 
 Élő devizaárfolyamok megjelenítése és valutaváltó kalkulátor.
 
@@ -49,3 +51,4 @@ Build output: `dist/` mappa
 ## Licensz
 
 © 2026 Minusz - Minden jog fenntartva
+

@@ -25,8 +25,6 @@ declare global {
     gtag?: (...args: unknown[]) => void;
     clarity?: ((...args: unknown[]) => void) & { q?: unknown[] };
     __gaInitialized?: boolean;
-    __gaScriptLoaded?: boolean;
-    __gaFallbackSent?: boolean;
     [key: string]: unknown;
   }
 }
@@ -43,10 +41,8 @@ interface ExchangeRates {
 type Currency = 'HUF' | 'EUR' | 'USD' | 'GBP' | 'CHF';
 
 const ANALYTICS_ID = 'G-HFNYDL6KN3';
-const ANALYTICS_STORAGE_KEY = 'analyticsConsent';
 const CLARITY_ID = 'vd9j8te53s';
 const ANALYTICS_SCRIPT_SRC = `https://www.googletagmanager.com/gtag/js?id=${ANALYTICS_ID}`;
-const GA_FALLBACK_CLIENT_ID_KEY = 'gaFallbackClientId';
 
 const FLAG_URLS = {
   HUF: '/flags/hu.svg',
@@ -67,60 +63,17 @@ interface SortableCurrencyCardProps {
   selectedCurrency: Currency;
 }
 
-const getOrCreateGaFallbackClientId = () => {
-  const existing = localStorage.getItem(GA_FALLBACK_CLIENT_ID_KEY);
-  if (existing) return existing;
-
-  const generated = `${Date.now()}.${Math.floor(Math.random() * 1_000_000_000)}`;
-  localStorage.setItem(GA_FALLBACK_CLIENT_ID_KEY, generated);
-  return generated;
-};
-
-const sendAnalyticsFallback = (reason: string) => {
-  if (window.__gaFallbackSent) return;
-  window.__gaFallbackSent = true;
-
-  try {
-    const params = new URLSearchParams({
-      v: '2',
-      tid: ANALYTICS_ID,
-      cid: getOrCreateGaFallbackClientId(),
-      en: 'app_open_fallback',
-      dl: window.location.href,
-      dt: document.title,
-      ul: navigator.language || 'hu-HU',
-      sr: `${window.screen.width}x${window.screen.height}`,
-      ep_reason: reason,
-    });
-
-    const url = `https://www.google-analytics.com/mp/collect?${params.toString()}`;
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(url, '');
-      return;
-    }
-
-    void fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      keepalive: true,
-    });
-  } catch {
-    // Best-effort fallback event.
-  }
-};
-
 const loadAnalytics = () => {
   const gaDebug = new URLSearchParams(window.location.search).get('ga_debug') === '1';
-  window[`ga-disable-${ANALYTICS_ID}`] = false;
 
-  // Standard gtag.js setup
+  // Standard gtag.js setup.
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || ((...args: unknown[]) => {
     window.dataLayer?.push(args);
   });
 
-  // Always update consent (handles revoke + re-grant)
-  window.gtag('consent', 'update', {
+  // Consent mode defaults (analytics enabled, ads disabled).
+  window.gtag('consent', 'default', {
     analytics_storage: 'granted',
     ad_storage: 'denied',
     ad_user_data: 'denied',
@@ -153,19 +106,7 @@ const loadAnalytics = () => {
 
   script.onerror = () => {
     console.warn('Google Analytics script betoltese sikertelen.');
-    sendAnalyticsFallback('script_error');
   };
-
-  const timeoutId = window.setTimeout(() => {
-    if (!window.__gaScriptLoaded) {
-      sendAnalyticsFallback('script_timeout');
-    }
-  }, 4000);
-
-  script.addEventListener('load', () => {
-    window.__gaScriptLoaded = true;
-    window.clearTimeout(timeoutId);
-  }, { once: true });
 
   document.head.appendChild(script);
 };
@@ -327,29 +268,7 @@ function App() {
     const savedOrder = localStorage.getItem('currencyOrder');
     return savedOrder ? JSON.parse(savedOrder) : ['EUR', 'USD', 'GBP', 'CHF'];
   });
-  const [analyticsConsent, setAnalyticsConsent] = useState<'granted' | 'denied' | null>(() => {
-    const savedConsent = localStorage.getItem(ANALYTICS_STORAGE_KEY);
-    return savedConsent === 'granted' || savedConsent === 'denied' ? savedConsent : null;
-  });
   const [isGameMode, setIsGameMode] = useState(false);
-
-  const updateAnalyticsConsent = (value: 'granted' | 'denied') => {
-    setAnalyticsConsent(value);
-    localStorage.setItem(ANALYTICS_STORAGE_KEY, value);
-  };
-
-  const resetAnalyticsConsent = () => {
-    localStorage.removeItem(ANALYTICS_STORAGE_KEY);
-    window[`ga-disable-${ANALYTICS_ID}`] = true;
-    window.gtag?.('consent', 'update', {
-      analytics_storage: 'denied',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    });
-    setClarityConsent('denied');
-    setAnalyticsConsent(null);
-  };
 
   const toggleGameMode = () => {
     setIsGameMode(prev => !prev);
@@ -391,24 +310,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (analyticsConsent === 'granted') {
-      loadAnalytics();
-      loadClarity();
-      setClarityConsent('granted');
-    } else if (analyticsConsent === 'denied') {
-      window[`ga-disable-${ANALYTICS_ID}`] = true;
-      window.gtag?.('consent', 'update', {
-        analytics_storage: 'denied',
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
-      });
-      setClarityConsent('denied');
-    } else {
-      window[`ga-disable-${ANALYTICS_ID}`] = true;
-      setClarityConsent('denied');
-    }
-  }, [analyticsConsent]);
+    loadAnalytics();
+    loadClarity();
+    setClarityConsent('granted');
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
@@ -734,61 +639,10 @@ function App() {
             </section>
             <div className={`text-center text-xs ${isDarkMode ? 'text-zinc-600' : 'text-stone-400'}`}>
               <span>© 2026 Minusz</span>
-              <button
-                type="button"
-                onClick={resetAnalyticsConsent}
-                className={`ml-2 underline underline-offset-2 ${isDarkMode ? 'text-zinc-400 hover:text-zinc-300' : 'text-stone-500 hover:text-stone-700'}`}
-              >
-                Süti beállítások
-              </button>
             </div>
           </div>
         </div>
       </div>
-
-      {analyticsConsent === null && (
-        <div
-          role="dialog"
-          aria-live="polite"
-          className={`fixed bottom-4 left-4 right-4 z-50 rounded-2xl p-4 border shadow-2xl backdrop-blur-xl ${
-            isDarkMode
-              ? 'bg-zinc-900/95 border-zinc-700 text-zinc-200'
-              : 'bg-white/95 border-stone-200 text-stone-700'
-          }`}
-        >
-          <div className="flex flex-col gap-3">
-            <p className="text-sm leading-relaxed">
-              Ez az oldal Google Analytics sütiket használ a látogatottság méréséhez. Engedélyezed?
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                aria-label="Sütik elutasítása"
-                onClick={() => updateAnalyticsConsent('denied')}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  isDarkMode
-                    ? 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700'
-                    : 'bg-stone-100 text-stone-700 border border-stone-300 hover:bg-stone-200'
-                }`}
-              >
-                Elutasítom
-              </button>
-              <button
-                type="button"
-                aria-label="Sütik elfogadása"
-                onClick={() => updateAnalyticsConsent('granted')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  isDarkMode
-                    ? 'bg-cyan-500 text-zinc-900 hover:bg-cyan-400'
-                    : 'bg-cyan-600 text-white hover:bg-cyan-500'
-                }`}
-              >
-                Elfogadom
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
